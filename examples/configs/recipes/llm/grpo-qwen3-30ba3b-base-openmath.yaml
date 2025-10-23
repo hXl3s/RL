@@ -1,0 +1,70 @@
+defaults: ../../grpo_math_1B.yaml
+grpo:
+  num_prompts_per_step: 128
+  num_generations_per_prompt: 32
+  max_num_steps: 50
+  max_val_samples: 50000
+  val_batch_size: ${grpo.max_val_samples}
+  val_period: 5
+  val_at_start: true
+loss_fn:
+  reference_policy_kl_penalty: 0.0
+  sequence_level_importance_ratios: true
+  token_level_loss: false
+  use_importance_sampling_correction: true
+checkpointing:
+  enabled: false
+  checkpoint_dir: results/grpo-qwen3-30ba3b-8n8g-megatron
+policy:
+  model_name: Qwen/Qwen3-30B-A3B-Base
+  train_micro_batch_size: 1
+  max_total_sequence_length: 4096
+  dtensor_cfg:
+    enabled: false
+  optimizer: null
+  scheduler: null
+  sequence_packing:
+    enabled: false
+    algorithm: modified_ffd
+  make_sequence_length_divisible_by: ${policy.megatron_cfg.tensor_model_parallel_size}
+  megatron_cfg:
+    enabled: true
+    activation_checkpointing: true
+    empty_unused_memory_level: 1
+    tensor_model_parallel_size: 4
+    pipeline_model_parallel_size: 4
+    num_layers_in_first_pipeline_stage: 3
+    num_layers_in_last_pipeline_stage: 2
+    expert_model_parallel_size: 4
+    expert_tensor_parallel_size: 1
+    sequence_parallel: true
+    apply_rope_fusion: false
+    moe_permute_fusion: true
+    optimizer:
+      lr: 2.4e-06
+      min_lr: 3.0e-08
+      params_dtype: "bfloat16"
+    scheduler:
+      lr_warmup_iters: 6
+      lr_warmup_init: 3.0e-08
+    env_vars:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:False
+  generation:
+    vllm_cfg:
+      async_engine: true
+      tensor_parallel_size: 32
+      enable_expert_parallel: true
+      gpu_memory_utilization: 0.6
+logger:
+  log_dir: logs/grpo-qwen3-30ba3b-8n8g-megatron
+  wandb_enabled: true
+  tensorboard_enabled: true
+  wandb:
+    project: nemo-rl
+    name: grpo-qwen3-30ba3b-8n8g-megatron
+cluster:
+  gpus_per_node: 8
+  num_nodes: 8
+env:
+  math:
+    num_workers: ${cluster.num_nodes}

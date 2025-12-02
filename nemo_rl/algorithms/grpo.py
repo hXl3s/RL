@@ -1874,7 +1874,7 @@ def validate(
                     max_seq_len=None,
                     generation_config=generation_config,
                     max_rollout_turns=None,
-                    greedy=False,
+                    greedy=True,
                 )
                 val_batch = nemo_gym_rollout_result.final_batch
                 gen_metrics = nemo_gym_rollout_result.rollout_metrics
@@ -1887,7 +1887,7 @@ def validate(
                     val_task_to_env,
                     max_seq_len=master_config["policy"]["max_total_sequence_length"],
                     max_rollout_turns=master_config["grpo"]["max_rollout_turns"],
-                    greedy=False,
+                    greedy=True,
                 )
             else:
                 val_batch, gen_metrics = run_multi_turn_rollout(
@@ -1897,7 +1897,7 @@ def validate(
                     val_task_to_env,
                     max_seq_len=master_config["policy"]["max_total_sequence_length"],
                     max_rollout_turns=master_config["grpo"]["max_rollout_turns"],
-                    greedy=False,
+                    greedy=True,
                 )
 
             total_rewards.extend(val_batch["total_reward"].tolist())

@@ -28,13 +28,8 @@ from nemo_rl.data.interfaces import LLMMessageLogType
 from nemo_rl.distributed.batched_data_dict import BatchedDataDict
 from nemo_rl.distributed.virtual_cluster import PY_EXECUTABLES
 from nemo_rl.environments.dapo_math_verifier import compute_score as dapo_math_verify
-from nemo_rl.environments.interfaces import (
-    EnvironmentInterface,
-    EnvironmentReturn,
-)
-from nemo_rl.environments.metrics import (
-    calculate_pass_rate_per_prompt,
-)
+from nemo_rl.environments.interfaces import EnvironmentInterface, EnvironmentReturn
+from nemo_rl.environments.metrics import calculate_pass_rate_per_prompt
 from nemo_rl.environments.utils import chunk_list_to_workers
 from nemo_rl.evals import answer_parsing
 
@@ -72,6 +67,8 @@ class HFVerifyWorker:
             ),
         )
 
+        self.re_matcher = re.compile(r"\s*<think>.*</think>\s*<answer>(.*)</answer>\s*")
+
     def verify(
         self,
         pred_responses: list[str],
@@ -95,6 +92,9 @@ class HFVerifyWorker:
 
         for response, ground_truth in zip(pred_responses, ground_truths):
             try:
+                match_structure = self.re_matcher.match(response)
+                ret_score = 0
+
                 with _mute_output():
                     math_verify_impl = kwargs.get("math_verify_impl", "hf_math_verify")
                     if kwargs.get("math_verify_impl") == "dapo_math_verify":
@@ -104,6 +104,10 @@ class HFVerifyWorker:
                         extracted_answer = reward_dict["pred"]
                     elif kwargs.get("math_verify_impl") == "hf_math_verify":
                         ground_truth_parsable = "\\boxed{" + ground_truth + "}"
+
+                        if match_structure:
+                            response = match_structure.group(1)
+
                         ret_score, extracted_answer = self.verify_func(
                             [ground_truth_parsable], [response]
                         )
@@ -112,7 +116,13 @@ class HFVerifyWorker:
                             f"Unknown math_verify_impl: {math_verify_impl}. Expected 'hf_math_verify' or 'dapo_math_verify'."
                         )
 
-                results.append(float(ret_score))
+                ret_score = float(ret_score) * 0.5
+
+                if match_structure:
+                    # print(response, extracted_answer)
+                    ret_score += 0.5
+
+                results.append(ret_score)
 
                 if return_extracted_answer:
                     # Make sure the extracted answer is not None and is a list of two elements
@@ -330,14 +340,17 @@ class MathEnvironment(EnvironmentInterface[MathEnvironmentMetadata]):
             else:
                 results.extend(worker_result)
 
+        def _content(result: float) -> str:
+            if result >= 1.0:
+                content = "Environment: correct"
+            elif result > 0.0:
+                content = "Environment: partial"
+            else:
+                content = "Environment: incorrect"
+            return content
+
         observations = [
-            {
-                "role": "environment",
-                "content": "Environment: correct"
-                if result
-                else "Environment: incorrect",
-            }
-            for result in results
+            {"role": "environment", "content": _content(result)} for result in results
         ]
 
         # create a tensor of rewards and done flags

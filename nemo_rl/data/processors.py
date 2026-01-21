@@ -168,12 +168,14 @@ def math_data_processor(
     if task_data_spec.prompt:
         problem = task_data_spec.prompt.format(problem)
     user_message = {"role": "user", "content": problem}
-    message = tokenizer.apply_chat_template(
-        [user_message],
-        tokenize=False,
-        add_generation_prompt=True,
-        add_special_tokens=False,
-    )
+    # message = tokenizer.apply_chat_template(
+    #     [user_message],
+    #     tokenize=False,
+    #     add_generation_prompt=True,
+    #     add_special_tokens=False,
+    # )
+    message = problem
+
     user_message["token_ids"] = tokenizer(
         message, return_tensors="pt", add_special_tokens=False
     )["input_ids"][0]
@@ -223,12 +225,14 @@ def math_hf_data_processor(
         "role": "user",
         "content": formatted_content,
     }
-    message: list[str] = tokenizer.apply_chat_template(  # type: ignore
-        [user_message],
-        tokenize=False,
-        add_generation_prompt=True,
-        add_special_tokens=False,
-    )
+    #message: list[str] = tokenizer.apply_chat_template(  # type: ignore
+    #    [user_message],
+    #    tokenize=False,
+    #    add_generation_prompt=True,
+    #    add_special_tokens=False,
+    #)
+
+    message = [formatted_content]
 
     user_message["token_ids"] = tokenizer(
         message,

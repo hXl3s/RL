@@ -1,16 +1,16 @@
 defaults: ../../grpo_math_1B.yaml
 grpo:
-  async_grpo:
-    enabled: true
-    max_trajectory_age_steps: 1
-    in_flight_weight_updates: true
+  #async_grpo:
+  #  enabled: true
+  #  max_trajectory_age_steps: 1
+  #  in_flight_weight_updates: true
   num_prompts_per_step: 128
   num_generations_per_prompt: 32
   max_num_steps: 50
   max_val_samples: 1000
   val_batch_size: ${grpo.max_val_samples}
-  val_period: 5
-  val_at_start: false
+  val_period: 1
+  val_at_start: true
 loss_fn:
   #reference_policy_kl_penalty: 0.0
   #sequence_level_importance_ratios: true
@@ -18,7 +18,7 @@ loss_fn:
   use_importance_sampling_correction: true
 checkpointing:
   enabled: true
-  save_period: 10
+  save_period: 15
   checkpoint_dir: results/grpo-qwen3-30ba3b-8n8g-megatron
 policy:
   model_name: /opt/checkpoints/deepseek-v3-base
@@ -41,7 +41,7 @@ policy:
     pipeline_model_parallel_size: 16
     num_layers_in_first_pipeline_stage: 3
     num_layers_in_last_pipeline_stage: 2
-    expert_model_parallel_size: 8
+    expert_model_parallel_size: 32
     expert_tensor_parallel_size: 1
     sequence_parallel: true
     apply_rope_fusion: false
@@ -63,11 +63,11 @@ policy:
       async_engine: true
       tensor_parallel_size: 32
       gpu_memory_utilization: 0.7
-    colocated:
-      enabled: false
-      resources:
-        gpus_per_node: ${cluster.gpus_per_node}
-        num_nodes: 16
+    #colocated:
+    #  enabled: false
+    #  resources:
+    #    gpus_per_node: ${cluster.gpus_per_node}
+    #    num_nodes: 16
 logger:
   log_dir: logs/grpo-qwen3-30ba3b-8n8g-megatron
   wandb_enabled: true

@@ -72,6 +72,7 @@ from nemo_rl.utils.logger import (
     print_message_log_samples,
 )
 from nemo_rl.utils.memory_tracker import MemoryTracker
+from nemo_rl.utils.mlperf import MLLoggerWrapper, constants
 from nemo_rl.utils.nsys import maybe_gpu_profile_step
 from nemo_rl.utils.timer import TimeoutChecker, Timer
 from nemo_rl.utils.venvs import create_local_venv_on_each_node
@@ -1032,6 +1033,7 @@ def grpo_train(
     checkpointer: CheckpointManager,
     grpo_save_state: GRPOSaveState,
     master_config: MasterConfig,
+    mllogger: MLLoggerWrapper,
     processor: Optional[AutoProcessor] = None,
 ) -> None:
     """Run GRPO training algorithm."""
@@ -1083,6 +1085,7 @@ def grpo_train(
     val_period = master_config["grpo"]["val_period"]
     colocated_inference = master_config["policy"]["generation"]["colocated"]["enabled"]
 
+    mllogger.log_init_stop_run_start()
     # Run validation at the start if configured
     # TODO: Add validation with kv scales if needed
     if val_at_start and current_step == 0:
@@ -1114,6 +1117,14 @@ def grpo_train(
         # This is the number of batches we processed so far at each step to generate responses whose std is non-zero. Maximum threshold is set by dynamic_sampling_max_gen_batches. Used in the case of dynamic sampling.
         dynamic_sampling_num_gen_batches = 0
 
+        mllogger.start(
+            key=constants.BLOCK_START,
+            metadata={
+                mllogger.constants.SAMPLES_COUNT: total_steps
+                * master_config["grpo"]["num_prompts_per_step"],
+                "step": total_steps,
+            },
+        )
         # Run grpo/dapo training loop (single-turn)
         for batch in dataloader:
             # A central place to store logging data that won't be deleted until the loop ends
@@ -1490,6 +1501,22 @@ def grpo_train(
 
                 # Run validation if it's a validation step
                 if val_period > 0 and (total_steps + 1) % val_period == 0:
+                    mllogger.end(
+                        key=constants.BLOCK_STOP,
+                        metadata={
+                            mllogger.constants.SAMPLES_COUNT: total_steps
+                            * master_config["grpo"]["num_prompts_per_step"],
+                            "step": total_steps,
+                        },
+                    )
+                    mllogger.start(
+                        key=constants.EVAL_START,
+                        metadata={
+                            mllogger.constants.SAMPLES_COUNT: total_steps
+                            * master_config["grpo"]["num_prompts_per_step"],
+                            "step": total_steps,
+                        },
+                    )
                     memory_tracker.snapshot_start_of_stage("Validation", dir())
                     if NEED_REFIT and POLICY_GENERATION_STALE:
                         refit_policy_generation(
@@ -1518,7 +1545,31 @@ def grpo_train(
                     logger.log_metrics(
                         val_metrics, total_steps + 1, prefix="validation"
                     )
-
+                    mllogger.end(
+                        key=constants.EVAL_STOP,
+                        metadata={
+                            constants.SAMPLES_COUNT: total_steps
+                            * master_config["grpo"]["num_prompts_per_step"],
+                            "step": total_steps,
+                        },
+                    )
+                    mllogger.event(
+                        key=constants.EVAL_ACCURACY,
+                        value=val_metrics["accuracy"],
+                        metadata={
+                            constants.SAMPLES_COUNT: total_steps
+                            * master_config["grpo"]["num_prompts_per_step"],
+                            "step": total_steps,
+                        },
+                    )
+                    mllogger.start(
+                        key=constants.BLOCK_START,
+                        metadata={
+                            constants.SAMPLES_COUNT: total_steps
+                            * master_config["grpo"]["num_prompts_per_step"],
+                            "step": total_steps,
+                        },
+                    )
                 # Get flat advantages and token mask for masked metrics computation
                 flat_advantages = flat_messages["advantages"]
                 flat_token_mask = flat_messages["token_loss_mask"]
@@ -1826,6 +1877,15 @@ def grpo_train(
 
         current_epoch += 1
         current_step = 0  # Reset step counter for new epoch
+    mllogger.end(
+        key=constants.BLOCK_STOP,
+        metadata={
+            constants.SAMPLES_COUNT: total_steps
+            * master_config["grpo"]["num_prompts_per_step"],
+            "step": total_steps,
+        },
+    )
+    mllogger.log_run_stop(status="success")
 
 
 def validate(

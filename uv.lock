@@ -3352,6 +3352,17 @@ wheels = [
 ]
 
 [[package]]
+name = "mlperf-logging"
+version = "4.1.38"
+source = { git = "https://github.com/mlperf/logging.git?rev=346e604#346e6046e16148ed095ffce5d9650f20e83b6858" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pyyaml" },
+    { name = "scipy" },
+]
+
+[[package]]
 name = "mlx"
 version = "0.28.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3904,6 +3915,7 @@ dependencies = [
     { name = "math-verify" },
     { name = "matplotlib" },
     { name = "mlflow" },
+    { name = "mlperf-logging" },
     { name = "ninja" },
     { name = "num2words" },
     { name = "numpy" },
@@ -4033,6 +4045,7 @@ requires-dist = [
     { name = "megatron-bridge", marker = "extra == 'mcore'", editable = "3rdparty/Megatron-Bridge-workspace" },
     { name = "megatron-core", marker = "extra == 'mcore'", editable = "3rdparty/Megatron-LM-workspace" },
     { name = "mlflow", specifier = ">=3.5.0,<3.6.0" },
+    { name = "mlperf-logging", git = "https://github.com/mlperf/logging.git?rev=346e604" },
     { name = "nemo-automodel", marker = "extra == 'automodel'", editable = "3rdparty/Automodel-workspace/Automodel" },
     { name = "nemo-gym", marker = "extra == 'nemo-gym'", editable = "3rdparty/Gym-workspace/Gym" },
     { name = "ninja" },

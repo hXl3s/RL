@@ -18,3 +18,6 @@
 	url = https://github.com/NVIDIA-NeMo/Gym.git
 	branch = main
 	shallow = true
+[submodule "3rdparty/Mlperf-common-workspace/mlperf-common"]
+	path = 3rdparty/Mlperf-common-workspace/mlperf-common
+	url = git@github.com:NVIDIA/mlperf-common.git

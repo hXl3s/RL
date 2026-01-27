@@ -39,6 +39,7 @@ from nemo_rl.environments.math_environment import MathEnvironment
 from nemo_rl.models.generation import configure_generation_config
 from nemo_rl.utils.config import load_config, parse_hydra_overrides
 from nemo_rl.utils.logger import get_next_experiment_dir
+from nemo_rl.utils.mlperf import MLLoggerWrapper, constants
 
 OmegaConf.register_new_resolver("mul", lambda a, b: a * b)
 
@@ -131,6 +132,9 @@ def main() -> None:
     """Main entry point."""
     # Parse arguments
     args, overrides = parse_args()
+    mllogger = MLLoggerWrapper()
+    mllogger.mlperf_submission_log("grpo_dsv3")
+    mllogger.start(key=constants.RUN_START)
 
     if not args.config:
         args.config = os.path.join(
@@ -253,6 +257,7 @@ def main() -> None:
             checkpointer,
             grpo_state,
             master_config,
+            mllogger=mllogger,
         )
 
 
